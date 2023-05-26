@@ -7,6 +7,7 @@ const currentPath = window.location.pathname;
 const h1 = document.body.querySelector("h1 .title");
 const listFiles = document.body.querySelector(".content");
 const newFolderButton = document.body.querySelector("h1 .action button.newFolder");
+let entries = new Map();
 
 h1.innerHTML = currentPath;
 
@@ -19,6 +20,71 @@ function convert(size) {
         unitDisplay: "narrow",
       }).format(size);
 }
+
+function formatDate(d) {
+    return Intl.DateTimeFormat( navigator.language, { dateStyle: "short", timeStyle: "short"}).format(d);
+}
+function _renderEntries(entries, path) {
+    const listElements =  [...entries].map( (entry) => `
+        <tr>
+            <td>
+                ${entry[1].isDir ? "<img class=\"entryIcon\" src=\"/static/folder.png\"/>" : ""}
+                <a href="${path + (entry[1].isDir ? path.endsWith("/") ? "": "/" :  "") + entry[0]}">${entry[0]}</a>
+            </td>
+            <td>
+                ${formatDate(entry[1].atimeMs)}
+            </td>
+            <td>
+                ${formatDate(entry[1].birthtimeMs)}
+            </td>
+            <td>
+                ${formatDate(entry[1].mtimeMs)}
+            </td>
+            <td>
+            ${convert(entry[1].size)}
+            </td>
+            <td>
+                ${entry[0] === '..' ? '' : `<button data-file="${entry[0]}" class="delete">Delete</button>`}
+            </td>
+        </tr>`);
+    listFiles.innerHTML = [`
+        <table>
+            <tr>
+                <th data-sort-attribute="" >File</th>
+                <th data-sort-attribute="size" >Size</th>
+                <th data-sort-attribute="atimeMs" >Last access</th>
+                <th data-sort-attribute="birthtimeMs" >Created</th>
+                <th data-sort-attribute="mtimeMs">Last modification</th>
+                <th></th>
+            </tr>`, 
+        ...listElements, 
+        "</table>"].join("");
+
+    listFiles.querySelectorAll("button.delete").forEach( (button) => button.addEventListener("click", deleteFile));
+    listFiles.querySelectorAll("th[data-sort-attribute]").forEach( (header) => header.addEventListener("click", sortEntries));
+}
+
+const orders = {
+    "": 1,
+    "size": 1
+};
+
+function sortEntries(ev) {
+    var order = orders[ev.target.getAttribute("data-sort-attribute")];
+    if ( order == undefined ) order = 1;
+    order = -order;
+
+    if ( ev.target.getAttribute("data-sort-attribute") === "" ) {
+        entries = Object.fromEntries(Object.entries(entries).sort( (e1, e2) => order * e1[0].localeCompare(e2[0])));
+    } else {
+        entries = Object.fromEntries(Object.entries(entries).sort( (e1, e2) => order * (e1[1].size - e2[1].size)));
+    }
+    
+    orders[ev.target.getAttribute("data-sort-attribute")] = order;
+
+    _renderEntries(new Map(Object.entries(entries)), currentPath);
+}
+
 async function resolveFilesForPath(path) {
     const files = await fetch(path, {
         headers: {
@@ -26,23 +92,8 @@ async function resolveFilesForPath(path) {
         }
     });
     if ( files && files.status == 200 ) {
-        const res = await files.json();
-
-        const listElements =  Object.keys(res).map( (entry) => `
-            <tr>
-                <td>
-                    <a href="${path + (res[entry].isFile ? "" : path.endsWith("/") ? "": "/") + entry}">${entry}</a>
-                </td>
-                <td>
-                ${convert(res[entry].size)}
-                </td>
-                <td>
-                    ${entry === '..' ? '' : `<button data-file="${entry}" class="delete">Delete</button>`}
-                </td>
-            </tr>`);
-        listFiles.innerHTML = ["<table><tr><th>File</th><th>Size</th><th></th></tr>", ...listElements, "</table>"].join("");
-
-        listFiles.querySelectorAll("button.delete").forEach( (button) => button.addEventListener("click", deleteFile));
+        entries = await files.json();
+        _renderEntries(new Map(Object.entries(entries)), path);
     }
 }
 
@@ -88,6 +139,8 @@ dropContainer.addEventListener("dragover", (e) => {
 
 newFolderButton.addEventListener("click", async (e) => {
     const fileName = prompt("New folder name");
+    if ( fileName == undefined ) return;
+
     const path = currentPath + (!currentPath.endsWith("/") ? "/" : "" ) + fileName;
     await fetch("/", {
         method: "POST",

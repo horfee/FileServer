@@ -25,9 +25,18 @@ h1 {
 }
 
 h1 span.title {
-    flex: 1
+    flex: 1;
+    margin: auto;
 }
 
+h1 .action button {
+    padding: 0;
+    height: 64px;
+}
+
+h1 .action button img {
+    height: 100%;
+}
 .content table {
     width: 100%;
     border-collapse: collapse;
@@ -35,6 +44,18 @@ h1 span.title {
 
 .content table th {
     text-align: left;
+}
+
+.content table tr td {
+    width: fit-content;
+}
+ .content table tr td:first-of-type {
+    width: unset;
+} 
+
+.content table tr td {
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 .content table tr:nth-child(even) {
@@ -47,4 +68,8 @@ h1 span.title {
 
 .content table tr:hover {
     background: #EAEAEA;
+}
+
+.entryIcon {
+    height: 18px;
 }
