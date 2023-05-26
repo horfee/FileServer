@@ -29,7 +29,7 @@ function _renderEntries(entries, path) {
         <tr>
             <td>
                 ${entry[1].isDir ? "<img class=\"entryIcon\" src=\"/static/folder.png\"/>" : ""}
-                <a href="${"." + path + (entry[1].isDir ? path.endsWith("/") ? "": "/" :  "/") + entry[0]}">${entry[0]}</a>
+                <a href="${path + (path.endsWith("/") ? "": "/") + entry[0]}">${entry[0]}</a>
             </td>
             <td>
                 ${formatDate(entry[1].atimeMs)}
