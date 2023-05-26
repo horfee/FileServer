@@ -103,7 +103,7 @@ async function deleteFile(ev) {
     const file = ev.target.getAttribute("data-file");
     const res = confirm(`Do you really want to delete ${file} ?`);
     if ( res ) {
-        const res = await fetch(file, {
+        const res = await fetch(currentPath + (currentPath.endsWith("/") ? "": "/") + file, {
             method: 'DELETE'
         });
         displayMessage(await res.json());
