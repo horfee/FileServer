@@ -8,7 +8,7 @@ const resolver = require("path").resolve;
 
 
 const port = process.env.PORT || 3000;
-const documentFolder = process.env.ROOTFOLDER || __dirname;
+const documentFolder = process.env.ROOTFOLDER || "/Users/horfee";
 
 const app = express();
 app.use(logger('tiny'));
@@ -89,7 +89,11 @@ app.get('/*', async function(req,res) {
         return res.send((await listFiles(resquestedFile)));
     } 
     
-    return res.sendFile(resolver(documentFolder, 'static/index.html'));
+    const staticFile = resolver(__dirname, "./" + req.path);
+    if ( fileExists(staticFile) && (await fs.stat(staticFile)).isFile() ) {
+        return res.sendFile(staticFile);
+    }
+    return res.sendFile(resolver(__dirname, 'static/index.html'));
     
 });
 
