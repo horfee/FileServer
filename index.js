@@ -23,11 +23,13 @@ app.use(bodyParser.json());
 /**     UPLOAD PART    */
 var storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const path = resolver(documentFolder, "./" + req.path).split("/").slice(0, -1).join("/");
+        const path = resolver(documentFolder, "./" + decodeURIComponent(req.path)).split("/").slice(0, -1).join("/");
+        console.log(`Path is ${path}`);
         cb(null,  path );
     },
     filename: (req, file, cb) => {
         const filename = decodeURIComponent(req.path.split("/").slice(-1)[0]);
+        console.log(`Filename is ${filename}`);
         cb(null, filename);
     }
 });
@@ -40,7 +42,7 @@ function uploadFiles(req, res) {
 
 app.post("/", async function(req, res) {
     const folderToCreate = decodeURIComponent(req.body.folder);
-    const folderCreated = await fs.mkdir(resolver( __dirname, "./" + folderToCreate), {
+    const folderCreated = await fs.mkdir(resolver( documentFolder, "./" + folderToCreate), {
         recursive: true
     })
     res.json({message: `Folder ${folderToCreate} successfully created`, file: folderToCreate});
