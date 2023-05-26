@@ -13,6 +13,7 @@ const documentFolder = process.env.ROOTFOLDER || "/Users/horfee";
 const app = express();
 app.use(logger('tiny'));
 //app.use(express.json());
+app.use(express.urlencoded(true));
 app.use(bodyParser.urlencoded({
     extended: true
   }));
@@ -51,7 +52,7 @@ app.put("/*", upload.single("file"), uploadFiles);
 
 
 app.delete('/*', async function(req,res){
-    const path = decodeURIComponent(req.path)
+    const path = decodeURIComponent(req.path);
     await fs.rm(resolver(documentFolder, "./" + path), {
         recursive: true,
         force: true        
@@ -80,7 +81,7 @@ const listFiles = async function(path) {
 app.get('/*', async function(req,res) {
    
 
-    const resquestedFile = resolver(documentFolder, "./" + req.path);
+    const resquestedFile = resolver(documentFolder, "./" + decodeURIComponent( req.path ));
 
     if ( fileExists(resquestedFile) && (await fs.stat(resquestedFile)).isFile() ) {
         return res.sendFile(resquestedFile);
@@ -89,7 +90,7 @@ app.get('/*', async function(req,res) {
         return res.send((await listFiles(resquestedFile)));
     } 
     
-    const staticFile = resolver(__dirname, "./" + req.path);
+    const staticFile = resolver(__dirname, "./" + decodeURIComponent(req.path) );
     if ( fileExists(staticFile) && (await fs.stat(staticFile)).isFile() ) {
         return res.sendFile(staticFile);
     }
