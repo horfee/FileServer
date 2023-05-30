@@ -1,14 +1,19 @@
 const express = require('express');
 const multer = require('multer');
 const logger = require('morgan');
-const fs = require('fs').promises;
 const bodyParser = require('body-parser');
-const fileExists = require('fs').existsSync;
+//const fileExists = require('fs').existsSync;
 const resolver = require("path").resolve;
-
+const localFS = require('./localfs');
+const SimpleAuthorizationSystem = require('./authorization');
 
 const port = process.env.PORT || 3000;
 const documentFolder = process.env.ROOTFOLDER || "/Users/horfee";
+
+const dataFileSystemService = new localFS({rootFolder: documentFolder});
+const systemFileSystemService = new localFS({rootFolder: __dirname});
+
+const authorizationService = new SimpleAuthorizationSystem({defaultAnswer: true});
 
 const app = express();
 app.use(logger('tiny'));
@@ -37,6 +42,7 @@ var storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 function uploadFiles(req, res) {
+    //fileSystemService.saveFile()
     res.json({ message: `File ${decodeURIComponent(req.path)} successfully uploaded`, file: req.path });
 }
 
@@ -63,40 +69,33 @@ app.delete('/*', async function(req,res){
 });
 
 const listFiles = async function(path) {
-    var items;
-    if ( !fileExists(path)) items = [".."];
-    else items = ["..", ...(await fs.readdir(path))];
-    console.log(`Items in path ${path}: ${items.join(",")}`);
-
-    const res = (await Promise.all(items.map( async (entry) => {
-        try {
-            const res = await fs.stat(resolver(path, entry));
-            return { [entry]: Object.assign( res, { isDir: res.isDirectory()})};
-        } catch(err) {
-            return { [entry]: { isDir: true}};
-        }
-    }))).reduce( (prev, current) => Object.assign(prev, current), {});
-    
-    return res;
+    return await dataFileSystemService.getFilesForPath(path);
 }
 
 app.get('/*', async function(req,res) {
    
 
-    const resquestedFile = resolver(documentFolder, "./" + decodeURIComponent( req.path ));
-
-    if ( fileExists(resquestedFile) && (await fs.stat(resquestedFile)).isFile() ) {
-        return res.sendFile(resquestedFile);
+    //const requestedFile = resolver(documentFolder, "./" + decodeURIComponent( req.path ));
+    const requestedFile = decodeURIComponent(req.path);
+    if ( await dataFileSystemService.fileExists(requestedFile)  && await authorizationService.isAuthorizedForFile('test', requestedFile)) {
+        return dataFileSystemService.sendFile(res, requestedFile);
+        //return res.sendFile(requestedFile);
     }
     if ( req.headers.accept === 'application/json' ) {
-        return res.send((await listFiles(resquestedFile)));
+        if ( await authorizationService.isAuthorizedForFile('test', requestedFile) ) {
+            return res.send((await listFiles(requestedFile)));
+        }
+        return res.json([]);
     } 
     
-    const staticFile = resolver(__dirname, "./" + decodeURIComponent(req.path) );
-    if ( fileExists(staticFile) && (await fs.stat(staticFile)).isFile() ) {
-        return res.sendFile(staticFile);
+    const staticFile = decodeURIComponent(req.path);
+    if ( await systemFileSystemService.fileExists(staticFile) ) {
+        return systemFileSystemService.sendFile(res, staticFile);
+        //return res.sendFile(staticFile);
     }
-    return res.sendFile(resolver(__dirname, 'static/index.html'));
+
+    return systemFileSystemService.sendFile(res, 'static/index.html');
+    //return res.sendFile(resolver(__dirname, 'static/index.html'));
     
 });
 
